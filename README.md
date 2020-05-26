@@ -1,1 +1,1 @@
-# InstallAwareExtractArchiveHook
+# InstallAware ExtractArchive Hook
