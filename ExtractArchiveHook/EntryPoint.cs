@@ -16,12 +16,18 @@ namespace ExtractArchiveHook
             _remoteObject.TriggerPingEvent();
         }
 
+        private LocalHook MsgAndCreateHook(string dll, string function, Delegate InNewProc, object InCallback)
+        {
+            _remoteObject.TriggerMessageEvent($"Create hook: {dll} - {function}");
+            return LocalHook.Create(LocalHook.GetProcAddress(dll, function), InNewProc, InCallback);
+        }
+
         public void Run(RemoteHooking.IContext context, string channelName, EntryPointParameters parameter)
         {
             try
             {
-                using (var extractArchiveHook = LocalHook.Create(LocalHook.GetProcAddress("mia.lib", "ExtractArchive"),
-                    new ExtractArchiveFnPtr(ExtractArchive_Hooked),
+                using (var extractArchiveHook = MsgAndCreateHook("kernel32.dll", "DeleteFileW",
+                    new DeleteFileWFnPtr(DeleteFileW_Hooked),
                     this))
                 {
                     // Don't forget that all hooks will start deactivated.
@@ -54,20 +60,18 @@ namespace ExtractArchiveHook
             _remoteObject.TriggerMessageEvent(message);
         }
 
-        #pragma warning disable CA2101
-        [DllImport("mia.lib", CallingConvention = CallingConvention.Cdecl, CharSet = CharSet.Ansi, SetLastError = true)]
-        private static extern void ExtractArchive(string archive, int arg_ch, string extractPath, int arg_14h, int arg_18h, string password, int arg_20h, int arg_24h, int arg_28h, int arg_2ch);
-        #pragma warning restore CA2101
+        [DllImport("kernel32.dll", CallingConvention = CallingConvention.StdCall, CharSet = CharSet.Unicode, SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        private static extern bool DeleteFileW([MarshalAs(UnmanagedType.LPWStr)] string lpFileName);
 
-        [UnmanagedFunctionPointer(CallingConvention.Cdecl, CharSet = CharSet.Ansi, SetLastError = true)]
-        private delegate void ExtractArchiveFnPtr(string archive, int arg_ch, string extractPath, int arg_14h, int arg_18h, string password, int arg_20h, int arg_24h, int arg_28h, int arg_2ch);
+        [UnmanagedFunctionPointer(CallingConvention.StdCall, CharSet = CharSet.Unicode, SetLastError = true)]
+        private delegate bool DeleteFileWFnPtr(string lpFileName);
 
-        private static void ExtractArchive_Hooked(string archive, int arg_ch, string extractPath, int arg_14h, int arg_18h, string password, int arg_20h, int arg_24h, int arg_28h, int arg_2ch)
+        private static bool DeleteFileW_Hooked(string lpFileName)
         {
             EntryPoint Self = (EntryPoint)HookRuntimeInfo.Callback;
-            Self.SendMessage($"'{archive}'='{password}';");
-            // call original API
-            ExtractArchive(archive, arg_ch, extractPath, arg_14h, arg_18h, password, arg_20h, arg_24h, arg_28h, arg_2ch);
+            Self.SendMessage($"Delete: {lpFileName}");
+            return true;
         }
     }
 }

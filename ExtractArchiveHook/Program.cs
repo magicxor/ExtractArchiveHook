@@ -21,10 +21,10 @@ namespace ExtractArchiveHook
         {
             try
             {
-                return p.MainModule.FileName.Contains(@"Local\Temp")
-                    && WindowsApi.FindWindow("TPoolTemplate", null) != IntPtr.Zero;
+                return p.MainModule.FileName.Contains(@"Embarcadero\Studio")
+                    && WindowsApi.FindWindow("TBasedInstallerDlg", null) != IntPtr.Zero;
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 return false;
             }
@@ -42,7 +42,7 @@ namespace ExtractArchiveHook
             Process process = null;
             while (process == null)
             {
-                process = Process.GetProcessesByName("Setup")
+                process = Process.GetProcessesByName("bds")
                     .Where(IsRadStudioSetupProcess)
                     .FirstOrDefault();
                 if (process == null)
@@ -51,7 +51,7 @@ namespace ExtractArchiveHook
                 }
                 else
                 {
-                    Console.WriteLine("Process found");
+                    Console.WriteLine($"Process found: {process.Id} - {process.ProcessName}");
                 }
             }
 
